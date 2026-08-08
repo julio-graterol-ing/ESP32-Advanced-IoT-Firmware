@@ -18,6 +18,13 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 1: 32-Bit Silicon Cores & Hardware Peripherals (Latest Updates)
 
+* **August 8, 2026 | Asynchronous AJAX Web Server Telemetry Core:Project:**
+
+  **Dual-Endpoint Asynchronous HTTP Telemetry API Node.**
+  Successfully architected and deployed a non-blocking asynchronous HTTP web server on the Espressif ESP32 platform to stream environmental metrics over local radio frequencies. The firmware completely separates data pipelines from visual rendering structures, optimizing memory consumption and bandwidth.
+
+  * The Engineering Fix: Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (/temperature and /humidity). Injected an embedded JavaScript layout using asynchronous network request routines (fetch()) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll numeric metrics directly from volatile registers every 2000ms. The UI dynamically patches the specific Document Object Model (DOM) container targets without redrawing the webpage canvas, reducing local SRAM overhead down to 13.3% and eliminating network link congestion.
+
 * **August 4, 2026 | High-Speed LEDC PWM Engine Instantiation:**
 
   **Project: 16-Bit Register Servo Kinematic Sweep.**  
