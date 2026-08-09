@@ -2,6 +2,7 @@
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
 #include <DHT.h>
+#include "ServoControl.h"
 
 // Hardware pinout and driver configuration
 #define DHTPIN 4          // Pin where the DHT sensor is connected
@@ -11,14 +12,20 @@ DHT dht (DHTPIN, DHTTYPE);
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
 
 //Local network credentials registry
-const char* ssid = "Your_SSID";
-const char* password = "Your_Pasword";
+const char* ssid = "YourSSID";
+const char* password = "YourPassword";
 
 //Global volatile register for telemetry storage
 int currentTemperature = 0;
 int currentHumidity = 0;
 unsigned long previuosDHTMillis = 0;
 const unsigned long DHT_INTERVAL = 2000;
+
+//Control servo motor angle for physical actuator
+int currentServoAngle = 0;
+int sweepDirection = 1;
+unsigned long previousServoMillis = 0;
+const unsigned long SERVO_INTERVAL = 15; //Update kinematic every 15ms
 
 //Embedded high performance HTML js ui source code
 const char index_html[] PROGMEM = R"rawliteral(
@@ -74,6 +81,9 @@ void setup() {
   Serial.begin(115200);
   dht.begin();
 
+  //Initialize Servo hardware and PWM driver
+  setupServoHardware();
+
   //Trigger internal Wifi hardware peripheral
   WiFi.begin(ssid, password);
 
@@ -124,6 +134,18 @@ void loop() {
       currentTemperature = (int)t;
       currentHumidity = (int)h;
     }
+  }
+
+  //Asynchronous kinematic servo sweep 
+  if (currentMillis - previousServoMillis >= SERVO_INTERVAL) {
+    previousServoMillis = currentMillis;
+    currentServoAngle += sweepDirection;
+
+    if (currentServoAngle >= 180 || currentServoAngle <= 0) {
+      sweepDirection = -sweepDirection; //Reverse sweep direction
+    }
+
+    writeServoAngle(currentServoAngle); //Directly inject new angle
   }
 }
 
