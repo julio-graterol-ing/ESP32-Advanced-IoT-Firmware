@@ -18,6 +18,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 1: 32-Bit Silicon Cores & Hardware Peripherals (Latest Updates)
 
+* **August 10, 2026 | Asynchronous AJAX Web Server & Servo Telemetry:**
+
+  **Project: Dual-Endpoint Asynchronous HTTP Telemetry and Servo Visualizer.**
+  Successfully architected and deployed a non-blocking asynchronous HTTP web server on the Espressif ESP32 platform to stream environmental metrics and the real-time position of the servo motor over local Wi-Fi.
+
+  * The Engineering Fix: Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (/temperature, /humidity, and the new /servo endpoint). Injected an embedded JavaScript layout using asynchronous network request routines (fetch()) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll the numeric metrics and the current servo angle directly from volatile registers every 2000ms for climate data and every 100ms for the motor position. The UI dynamically updates the specific Document Object Model (DOM) targets and moves a custom visual progress bar without redrawing the webpage canvas, keeping local SRAM overhead down to 13.5% and eliminating network lag.
+
+
 * **August 8, 2026 | Asynchronous AJAX Web Server Telemetry Core:Project:**
 
   **Dual-Endpoint Asynchronous HTTP Telemetry API Node.**
