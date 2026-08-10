@@ -1,25 +1,14 @@
 #include <Arduino.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
-#include <DHT.h>
 #include "ServoControl.h"
+#include "SensorRead.h"
 
-// Hardware pinout and driver configuration
-#define DHTPIN 4          // Pin where the DHT sensor is connected
-#define DHTTYPE DHT11
-
-DHT dht (DHTPIN, DHTTYPE);
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
 
 //Local network credentials registry
 const char* ssid = "YourSSID";
 const char* password = "YourPassword";
-
-//Global volatile register for telemetry storage
-int currentTemperature = 0;
-int currentHumidity = 0;
-unsigned long previuosDHTMillis = 0;
-const unsigned long DHT_INTERVAL = 2000;
 
 //Control servo motor angle for physical actuator
 int currentServoAngle = 0;
@@ -79,7 +68,7 @@ const char index_html[] PROGMEM = R"rawliteral(
 
 void setup() {
   Serial.begin(115200);
-  dht.begin();
+  setupClimateSensor(); //Initialize DHT11 sensor hardware
 
   //Initialize Servo hardware and PWM driver
   setupServoHardware();
@@ -122,19 +111,7 @@ Serial.println("[STATUS] Async HTTP Server Engine running");
 void loop() {
   unsigned long currentMillis = millis();
 
-  //Asynchrous background task Scheduler for enviromental monitoring
-  if (currentMillis - previuosDHTMillis >= DHT_INTERVAL) {
-    previuosDHTMillis = currentMillis;
-
-    float t = dht.readTemperature();
-    float h = dht.readHumidity();
-
-    //shiel telemetry registers from reading failures (NaN values)
-    if (!isnan(t) && !isnan(h)) {
-      currentTemperature = (int)t;
-      currentHumidity = (int)h;
-    }
-  }
+  updateClimateTelemetry();
 
   //Asynchronous kinematic servo sweep 
   if (currentMillis - previousServoMillis >= SERVO_INTERVAL) {
