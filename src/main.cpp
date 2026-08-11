@@ -29,10 +29,11 @@ const char index_html[] PROGMEM = R"rawliteral(
         .card  { background: white; padding: 25px; margin: 20px auto; max-width: 400px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
         .metric { font-size: 3rem; font-weight: bold; color: #2c3e50; margin: 10px 0; }
         .label { font-size: 1.1rem; color: #7f8c8d; text-transform: uppercase; letter-spacing: 1px; }
+        .actuator { color: #d35400; }
     </style> 
 </head>
 <body>
-    <h1>UMH Industrial Telemetry</h1>
+    <h1>UMH IoT Station: telemetry & Actuators</h1>
 
     <div class="card">
         <div class="label"> Temperature</div>
@@ -46,6 +47,12 @@ const char index_html[] PROGMEM = R"rawliteral(
         <div class="label">%</div>
     </div>
 
+    <div class="card">
+        <div class="label">Servo Motor Position</div>
+        <div class="metric actuator"><span id="servo">0</span>&deg;</div>
+        <div class="label">Kinematic Angle</div>
+    </div>
+
     <script>
         //High speed asynchonous routine to fetch sensor endpoints without reloading
         function updateTelemetry() {
@@ -56,11 +63,20 @@ const char index_html[] PROGMEM = R"rawliteral(
             fetch('/humidity').then(response => response.text()).then (data => {
                 document.getElementById('hum').innerText = data;
             });
-
         }
+
+        //New petition to fetch servo actuator position
+        function updateActuatorState() {
+            fetch('/servo').then(response => response.text()).then(data => {
+                document.getElementById('servo').innerText = data;
+            });
+         }
+
+        
         //Instantie steady execution interval scheduler every 2000ms
         setInterval(updateTelemetry, 2000);
-        window.onload = updateTelemetry;
+        setInterval(updateActuatorState, 150); //Sincronize servo actuator position with high frequency
+        window.onload = function(){ updateTelemetry(); updateActuatorState(); };
     </script>
 </body>
 </html>
@@ -101,6 +117,11 @@ server.on("/temperature", HTTP_GET, [](AsyncWebServerRequest *request){
 //Gataway Route: real time humidity API Endpoint
 server.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){
   request->send(200,"text/plain", String(currentHumidity));
+});
+
+//Gateway Route: Real time servo actuator position API Endpoint
+server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *request){
+  request->send(200, "text/plain", String(currentServoAngle));
 });
 
 //Start the underlying network listening daemon
