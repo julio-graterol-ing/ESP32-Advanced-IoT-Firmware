@@ -3,12 +3,11 @@
 #include <ESPAsyncWebServer.h>
 #include "ServoControl.h"
 #include "SensorRead.h"
+#include "CloudClient.h"
+#include "secrets.h"
+#include "WiFiClientSecure.h"
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
-
-//Local network credentials registry
-const char* ssid = "YourSSID";
-const char* password = "YourPassword";
 
 //Control servo motor angle for physical actuator
 int currentServoAngle = 0;
@@ -63,6 +62,7 @@ const char index_html[] PROGMEM = R"rawliteral(
             fetch('/humidity').then(response => response.text()).then (data => {
                 document.getElementById('hum').innerText = data;
             });
+
         }
 
         //New petition to fetch servo actuator position
@@ -82,6 +82,45 @@ const char index_html[] PROGMEM = R"rawliteral(
 </html>
 )rawliteral";
 
+//FreeRTOS background task handle use to run cloud alerts independent
+TaskHandle_t CloudTaskHandle = NULL;
+
+void cloudAlertWorker(void * parameter) {
+    //Secondary infinite loop, isolated from the main thread
+    for(;;) {
+        checkCloudAlerts(currentTemperature);
+        vTaskDelay(pdMS_TO_TICKS(1000));
+    }
+}
+
+//Diagnostic test: is there any outboud internet reachability at all
+void testInternetReachable() {
+    WiFiClient client;
+    IPAddress googleDNS(8, 8, 8, 8);
+    Serial.println("[TEST-NET] Attempting plain TCP connect to 8.8.8.8:53...");
+    if (client.connect(googleDNS, 53)) {
+        Serial.println("[TEST-NET] Internet reachable! Connection SUCCESS");
+        client.stop();
+    } else {
+        Serial.println ("[TEST-NET] Internet not reachable. Connection Failed");
+
+    }
+}
+
+//Diagnostic test: raw TLS connection bypassing HTTPClient entirely
+void testRawTLS () {
+    WiFiClientSecure client;
+    client.setInsecure();
+    client.setHandshakeTimeout(30);
+    Serial.println ("[TEST] Attempting raw TLS connect to maker.ifttt.com:443");
+    if (client.connect("maker.ifttt.com", 443)) {
+        Serial.print("[TEST] Raw TLS connection success");
+        client.stop();
+    } else {
+        Serial.println("[TEST] Raw TLS connection failed");
+    }
+}
+
 void setup() {
   Serial.begin(115200);
   setupClimateSensor(); //Initialize DHT11 sensor hardware
@@ -90,7 +129,7 @@ void setup() {
   setupServoHardware();
 
   //Trigger internal Wifi hardware peripheral
-  WiFi.begin(ssid, password);
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
 
 //non blocking connection watchdog loop
@@ -103,6 +142,23 @@ while (WiFi.status() != WL_CONNECTED) {
 Serial.println("\n[SUCCESS] Wifi Connected active.");
 Serial.print("[INFO] Server local IP Address");
 Serial.println(WiFi.localIP());
+
+//Disable Wifi radio power saving modem sleep for stability on strict networks
+WiFi.setSleep(false);
+Serial.print("[DEBUG] Wifi sleep mode is now: ");
+Serial.println(WiFi.getSleep () ? "Enable (still sleeping!)" : "Disable (radio always on)");
+
+//NetworkDiagnostics: confirm gateway/subnet/DNS 
+Serial.print("[DEBUG] Gataway IP: ");
+Serial.println(WiFi.gatewayIP());
+Serial.print("[DEBUG] Subnet Mask: ");
+Serial.println(WiFi.subnetMask());
+Serial.print("[DEBUG] DNS IP: ");
+Serial.println(WiFi.dnsIP());
+
+//Run outbound connectivity diagnostic
+testInternetReachable();
+testRawTLS();
 
 //Gateway Route: Serve master user interface HTML document
 server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
@@ -127,7 +183,23 @@ server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *request){
 //Start the underlying network listening daemon
 server.begin();
 Serial.println("[STATUS] Async HTTP Server Engine running");
+
+//Multi core task creation:
+//Assing the HTTPS alert checking task to core 0 with 16kn of dedicated stack
+xTaskCreatePinnedToCore(
+    cloudAlertWorker, //Function that runs the task
+    "CloudTask", //Task name
+    16384, //Stack size
+    NULL, //Input parameters
+    1, // task priority
+    &CloudTaskHandle, //Task handle for tracking
+    0 //Core ID 
+);
+
+Serial.println("[SYSTEM] Multi core architecture initialized. Cloud assigned to core 0");
+
 }
+
 
 void loop() {
   unsigned long currentMillis = millis();
@@ -146,5 +218,3 @@ void loop() {
     writeServoAngle(currentServoAngle); //Directly inject new angle
   }
 }
-
-
