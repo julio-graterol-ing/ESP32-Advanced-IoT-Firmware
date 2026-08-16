@@ -11,27 +11,38 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 * **Hardware Peripherals Abstraction (LEDC Engine):** Bypassing blocking software loops by leveraging independent silicon-level timers to drive hardware actuators.
 * **Dual-Core Asynchronous Slicing:** Designing non-blocking background routines (`millis()`) compliant with the ESP32 background Wi-Fi and Bluetooth network stacks.
 * **Enterprise Repository Governance:** Maintaining separate code repositories to isolate legacy 8-bit fundamental codebases from advanced connected 32-bit cloud deployments.
+* **FreeRTOS Real-Time Task Allocation:** Pinned scheduling of network-heavy cryptographic operations onto specific physical silicon cores to guarantee hardware actuator priority.
+* **Secure Compilation Variable Isolation:** Abstracting Wi-Fi credentials and cloud provider endpoints out of the compiler text segments to protect digital signatures.
 
 ---
 
 ## 📊 Technical Milestones & Core Deployments
 
-### 📦 Phase 1: 32-Bit Silicon Cores & Hardware Peripherals (Latest Updates)
+### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
+
+* **August 15, 2026 | FreeRTOS Pinned Core TLS Webhook & Network Diagnostics:**
+
+  **Project: Real-Time Dual-Core Cloud Webhook Injector with Integrated Connectivity Validation.**  
+  Successfully architected and deployed a multi-threaded IoT network hub that evaluates climate threshold rules and asynchronously fires secure HTTPS payloads to the IFTTT cloud API.
+
+  * *The Bottleneck:* Executing synchronous `HTTPClient` operations requiring high-overhead SSL/TLS handshakes (`mbedTLS`) caused severe stack fragmentation when combined with the local asynchronous HTTP server. The 16 KB default allocation overhead crashed volatile memory pools, resulting in runtime freezes (`start_ssl_client: -1`) and actuator jitter. Furthermore, external network environment restrictions (carrier tethering filtering) mimicked firmware-level socket blockages.
+  * *The Engineering Fix:* Refactored the architecture by splitting logic compilation structures via `secrets.h` and separate translation units using `extern` pointers to eliminate linker variable duplication. Instantiated a native FreeRTOS worker kernel sequence (`xTaskCreatePinnedToCore`) pinning the cloud telemetry loop exclusively onto **Core 0** with a dedicated 16 KB stack buffer, leaving the master actuator timeline to run unhindered on Core 1. Implemented a bypass for strict Root CA chain validation via `client.setInsecure()` and increased handshake execution windows to 30s. Finally, integrated dual bare-metal network diagnostics—performing raw TCP handshakes to Google's public DNS (`8.8.8.8:53`) and raw TLS socket probes (`://ifttt.com`)—confirming real-time outbound packet ingestion and deterministic execution despite restrictive cellular networks.
+
+### 📦 Phase 1: 32-Bit Silicon Cores & Hardware Peripherals
 
 * **August 10, 2026 | Asynchronous AJAX Web Server & Servo Telemetry:**
 
-  **Project: Dual-Endpoint Asynchronous HTTP Telemetry and Servo Visualizer.**
+  **Project: Dual-Endpoint Asynchronous HTTP Telemetry and Servo Visualizer.**  
   Successfully architected and deployed a non-blocking asynchronous HTTP web server on the Espressif ESP32 platform to stream environmental metrics and the real-time position of the servo motor over local Wi-Fi.
 
-  * The Engineering Fix: Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (/temperature, /humidity, and the new /servo endpoint). Injected an embedded JavaScript layout using asynchronous network request routines (fetch()) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll the numeric metrics and the current servo angle directly from volatile registers every 2000ms for climate data and every 100ms for the motor position. The UI dynamically updates the specific Document Object Model (DOM) targets and moves a custom visual progress bar without redrawing the webpage canvas, keeping local SRAM overhead down to 13.5% and eliminating network lag.
+  * *The Engineering Fix:* Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (`/temperature`, `/humidity`, and the `/servo` endpoint). Injected an embedded JavaScript layout using asynchronous network request routines (`fetch()`) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll the numeric metrics and the current servo angle directly from volatile registers every 2000ms for climate data and every 100ms for the motor position. The UI dynamically updates the specific Document Object Model (DOM) targets and moves a custom visual progress bar without redrawing the webpage canvas, keeping local SRAM overhead down to 13.5% and eliminating network lag.
 
+* **August 8, 2026 | Asynchronous AJAX Web Server Telemetry Core:**
 
-* **August 8, 2026 | Asynchronous AJAX Web Server Telemetry Core:Project:**
-
-  **Dual-Endpoint Asynchronous HTTP Telemetry API Node.**
+  **Project: Dual-Endpoint Asynchronous HTTP Telemetry API Node.**  
   Successfully architected and deployed a non-blocking asynchronous HTTP web server on the Espressif ESP32 platform to stream environmental metrics over local radio frequencies. The firmware completely separates data pipelines from visual rendering structures, optimizing memory consumption and bandwidth.
 
-  * The Engineering Fix: Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (/temperature and /humidity). Injected an embedded JavaScript layout using asynchronous network request routines (fetch()) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll numeric metrics directly from volatile registers every 2000ms. The UI dynamically patches the specific Document Object Model (DOM) container targets without redrawing the webpage canvas, reducing local SRAM overhead down to 13.3% and eliminating network link congestion.
+  * *The Engineering Fix:* Refactored the traditional page-reloading model by instantiating discrete HTTP Rest API endpoints (`/temperature` and `/humidity`). Injected an embedded JavaScript layout using asynchronous network request routines (`fetch()`) inside a PROGMEM string buffer. This allows the remote mobile or desktop client browser to poll numeric metrics directly from volatile registers every 2000ms. The UI dynamically patches the specific Document Object Model (DOM) container targets without redrawing the webpage canvas, reducing local SRAM overhead down to 13.3% and eliminating network link congestion.
 
 * **August 4, 2026 | High-Speed LEDC PWM Engine Instantiation:**
 
@@ -46,12 +57,19 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 ## 📂 Project Structure
 
 ```text
+├── include/
+│   ├── CloudClient.h      # Outbound HTTPS network event signatures
+│   ├── SensorRead.h       # Climate telemetry physical interfaces
+│   ├── ServoControl.h     # Dynamic PWM angular drive interfaces
+│   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
-│   └── main.cpp           # Master 32-bit peripheral execution scheduler
+│   ├── CloudClient.cpp    # mbedTLS network engine implementation
+│   ├── SensorRead.cpp     # DHT11 sampling and registers updates
+│   ├── ServoControl.cpp   # LEDC hardware clock driver instantiation
+│   └── main.cpp           # Master 32-bit multi-core orchestrator
 ├── platformio.ini         # Espressif 32-bit dependency & environment core
 └── README.md              # Active IoT engineering portfolio documentation
 ```
 
 ---
 *Developed under professional firmware guidelines to demonstrate advanced embedded system competencies toward my career at Universidad Miguel Hernández (UMH).*
-
