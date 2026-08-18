@@ -4,6 +4,7 @@
 #include "ServoControl.h"
 #include "SensorRead.h"
 #include "CloudClient.h"
+#include "MqttClient.h"
 #include "secrets.h"
 #include "WiFiClientSecure.h"
 
@@ -14,6 +15,7 @@ int currentServoAngle = 0;
 int sweepDirection = 1;
 unsigned long previousServoMillis = 0;
 const unsigned long SERVO_INTERVAL = 15; //Update kinematic every 15ms
+bool remoteControlActive = false; //when true, disables the automatic sweep so MQTT take full control
 
 //Embedded high performance HTML js ui source code
 const char index_html[] PROGMEM = R"rawliteral(
@@ -184,6 +186,9 @@ server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *request){
 server.begin();
 Serial.println("[STATUS] Async HTTP Server Engine running");
 
+//Initialize background MQTT client connection parameters
+setupMQTT();
+
 //Multi core task creation:
 //Assing the HTTPS alert checking task to core 0 with 16kn of dedicated stack
 xTaskCreatePinnedToCore(
@@ -206,8 +211,12 @@ void loop() {
 
   updateClimateTelemetry();
 
+  //Maintain Active cloud broker socket link and process inbound/outbound feeds
+  maintainMQTT();
+  publishTemperature(currentTemperature);
+
   //Asynchronous kinematic servo sweep 
-  if (currentMillis - previousServoMillis >= SERVO_INTERVAL) {
+  if (!remoteControlActive && currentMillis - previousServoMillis >= SERVO_INTERVAL) {
     previousServoMillis = currentMillis;
     currentServoAngle += sweepDirection;
 
