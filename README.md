@@ -13,12 +13,21 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 * **Enterprise Repository Governance:** Maintaining separate code repositories to isolate legacy 8-bit fundamental codebases from advanced connected 32-bit cloud deployments.
 * **FreeRTOS Real-Time Task Allocation:** Pinned scheduling of network-heavy cryptographic operations onto specific physical silicon cores to guarantee hardware actuator priority.
 * **Secure Compilation Variable Isolation:** Abstracting Wi-Fi credentials and cloud provider endpoints out of the compiler text segments to protect digital signatures.
+* **Asynchronous Pub/Sub Event-Driven Steering:** Transitioning from heavy request-response paradigms to state-driven bidirectional MQTT sockets to decouple execution logic.
 
 ---
 
 ## 📊 Technical Milestones & Core Deployments
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
+
+* **August 18, 2026 | Bidirectional MQTT Broker Integration & Actuator Override:**
+
+  **Project: Real-Time Event-Driven MQTT Telemetry Node and Remote Servo Steering.**  
+  Successfully architected and deployed an asynchronous, low-overhead MQTT client integrated with the Adafruit IO cloud platform, establishing robust bidirectional pipelines for sensor data publishing and live actuator control.
+
+  * *The Bottleneck:* Integrating the `Adafruit MQTT Library` introduced invasive transit dependecies (`WiFi101` and `WiFiNINA`) that triggered strict class redefinitions against the native ESP32 core, causing false syntax alerts and breaking hardware-level diagnostics. Additionally, typical inline string concatenation failed during dynamic feed construction since the preprocessor variables (`AIO_USERNAME`) are evaluated at runtime rather than compile-time. Mechanically, the local asynchronous kinematic loop continuously overwrote incoming remote data, snapping the actuator back to its auto-sweep instantly.
+  * *The Engineering Fix:* Refactored the network engine layout by applying a strict `lib_ignore` filter in the environment core to isolate the native Espressif Wi-Fi stack. Implemented heap allocation via dynamic pointer instantiation (`new Adafruit_MQTT_Publish`) utilizing safe runtime buffer sizing (`snprintf`) to dynamically compile user paths. Isolated credential assets by routing all cloud variables exclusively through a segregated translation unit (`secrets.h` / `secrets.cpp`). Finally, engineered a thread-safe behavioral bypass utilizing an externalized status flag (`remoteControlActive`). The execution loop intercepts inbound packet callbacks on an ultra-low 10ms polling window, instantly disabling the automatic sweep to hand over deterministic, real-time positional control to cloud-side deslizadores without interrupting the local background server infrastructure.
 
 * **August 15, 2026 | FreeRTOS Pinned Core TLS Webhook & Network Diagnostics:**
 
@@ -59,11 +68,13 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 ```text
 ├── include/
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
+│   ├── MqttClient.h       # Dynamic MQTT event routing signatures
 │   ├── SensorRead.h       # Climate telemetry physical interfaces
 │   ├── ServoControl.h     # Dynamic PWM angular drive interfaces
 │   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
+│   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
 │   ├── SensorRead.cpp     # DHT11 sampling and registers updates
 │   ├── ServoControl.cpp   # LEDC hardware clock driver instantiation
 │   └── main.cpp           # Master 32-bit multi-core orchestrator
