@@ -8,9 +8,6 @@
 #define DHTPIN 4          // Pin where the DHT sensor is connected
 #define DHTTYPE DHT11     // DHT 11 sensor type
 
-//Share colatile telemetry registers with external modules
-extern int currentTemperature;
-extern int currentHumidity;
 
 void setupClimateSensor();
 
