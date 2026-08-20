@@ -7,8 +7,13 @@
 #include "MqttClient.h"
 #include "secrets.h"
 #include "WiFiClientSecure.h"
+#include "QueueManager.h"
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
+
+//local volatile telemetry caches for thread safe web endpoint responses
+static int webTemperatureCache = 0;
+static int webHumidityCache = 0;
 
 //Control servo motor angle for physical actuator
 int currentServoAngle = 0;
@@ -88,10 +93,20 @@ const char index_html[] PROGMEM = R"rawliteral(
 TaskHandle_t CloudTaskHandle = NULL;
 
 void cloudAlertWorker(void * parameter) {
+    ClimateData receivedData;
     //Secondary infinite loop, isolated from the main thread
     for(;;) {
-        checkCloudAlerts(currentTemperature);
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        //Block task until data arrives in the queue, checking with a 1000ms max timeout window
+        if(xQueueReceive(climateQueue, & receivedData, pdMS_TO_TICKS(1000)) == pdTRUE) {
+            Serial.printf("[QUEUE-RX] Received from queue -> Temp: %d, Hum: %d\n", receivedData.temperature, receivedData.humidity);
+            //Pass safe local values to network function on core 0
+            checkCloudAlerts(receivedData.temperature);
+            publishTemperature(receivedData.temperature);
+
+            //Update local caches securely within core 0 execution context
+            webTemperatureCache = receivedData.temperature;
+            webHumidityCache = receivedData.humidity;
+        }
     }
 }
 
@@ -125,6 +140,10 @@ void testRawTLS () {
 
 void setup() {
   Serial.begin(115200);
+
+  //Initialize hardware protected communication queue before spawning task
+  setupQueueSystem();
+
   setupClimateSensor(); //Initialize DHT11 sensor hardware
 
   //Initialize Servo hardware and PWM driver
@@ -169,12 +188,12 @@ server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 
 //Gateway route: Real time dynamic temperature API Endpoint
 server.on("/temperature", HTTP_GET, [](AsyncWebServerRequest *request){
-  request->send(200, "text/plain", String(currentTemperature));
+  request->send(200, "text/plain", String(webTemperatureCache));
 });
 
 //Gataway Route: real time humidity API Endpoint
 server.on("/humidity", HTTP_GET, [](AsyncWebServerRequest *request){
-  request->send(200,"text/plain", String(currentHumidity));
+  request->send(200,"text/plain", String(webHumidityCache));
 });
 
 //Gateway Route: Real time servo actuator position API Endpoint
@@ -213,7 +232,7 @@ void loop() {
 
   //Maintain Active cloud broker socket link and process inbound/outbound feeds
   maintainMQTT();
-  publishTemperature(currentTemperature);
+  
 
   //Asynchronous kinematic servo sweep 
   if (!remoteControlActive && currentMillis - previousServoMillis >= SERVO_INTERVAL) {
