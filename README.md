@@ -21,6 +21,16 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **August 21, 2026 | FreeRTOS Message Queue Integration & Race Condition Elimination:**
+
+  **Project: Thread-Safe Inter-Core Climate Data Queue Infrastructure.**  
+  Successfully architected, compiled, and deployed a hardware-protected FreeRTOS message pipeline (`QueueManager`) to route environmental telemetry between distinct processing units.
+
+  * *The Bottleneck:* Relying on shared global registers (`currentTemperature` and `currentHumidity`) created severe race condition risks in multi-core execution. When Core 1 mutated these variables during sensor sampling at the exact moment Core 0 attempted to parse them for MQTT publishing, the system risked memory corruption, data interleaving, or unhandled CPU exceptions.
+  * *The Engineering Fix:* Eradicated global telemetry variables from the compilation scope. Engineered a modular message system that instantiates a structured `ClimateData` binary payload. The sensor subsystem on Core 1 captures data asynchronously, packages it, and executes a non-blocking hardware push (`xQueueSend`) with a 0ms wait threshold to preserve localized timing. On Core 0, the cloud task uses an optimized block window (`xQueueReceive`) to safely extract data, update safe local volatile caches for AJAX endpoints, and stream payloads to public networks, guaranteeing total thread-safe structural isolation.
+
+
+
 * **August 18, 2026 | Bidirectional MQTT Broker Integration & Actuator Override:**
 
   **Project: Real-Time Event-Driven MQTT Telemetry Node and Remote Servo Steering.**  
@@ -69,17 +79,20 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 ├── include/
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
 │   ├── MqttClient.h       # Dynamic MQTT event routing signatures
+│   ├── QueueManager.h     # Thread-safe FreeRTOS Queue infrastructure
 │   ├── SensorRead.h       # Climate telemetry physical interfaces
 │   ├── ServoControl.h     # Dynamic PWM angular drive interfaces
 │   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
 │   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
-│   ├── SensorRead.cpp     # DHT11 sampling and registers updates
+│   ├── QueueManager.cpp   # FreeRTOS hardware-protected queue execution
+│   ├── SensorRead.cpp     # DHT11 sampling and binary payload queue dispatch
 │   ├── ServoControl.cpp   # LEDC hardware clock driver instantiation
 │   └── main.cpp           # Master 32-bit multi-core orchestrator
 ├── platformio.ini         # Espressif 32-bit dependency & environment core
 └── README.md              # Active IoT engineering portfolio documentation
+
 ```
 
 ---
