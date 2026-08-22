@@ -94,8 +94,13 @@ TaskHandle_t CloudTaskHandle = NULL;
 
 void cloudAlertWorker(void * parameter) {
     ClimateData receivedData;
+    Serial.printf("[CORE-CHECK] cloudAlertWorker is running on Core: %d\n", xPortGetCoreID());
     //Secondary infinite loop, isolated from the main thread
     for(;;) {
+        //Maintain the MQTT broker socket here instead of in loop
+        // MQTT object is only ever touched from this single (core 0)
+        maintainMQTT();
+
         //Block task until data arrives in the queue, checking with a 1000ms max timeout window
         if(xQueueReceive(climateQueue, & receivedData, pdMS_TO_TICKS(1000)) == pdTRUE) {
             Serial.printf("[QUEUE-RX] Received from queue -> Temp: %d, Hum: %d\n", receivedData.temperature, receivedData.humidity);
@@ -229,11 +234,7 @@ void loop() {
   unsigned long currentMillis = millis();
 
   updateClimateTelemetry();
-
-  //Maintain Active cloud broker socket link and process inbound/outbound feeds
-  maintainMQTT();
   
-
   //Asynchronous kinematic servo sweep 
   if (!remoteControlActive && currentMillis - previousServoMillis >= SERVO_INTERVAL) {
     previousServoMillis = currentMillis;
