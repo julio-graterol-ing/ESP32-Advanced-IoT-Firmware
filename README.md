@@ -21,6 +21,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **August 22, 2026 | Cross-Core MQTT Client Consolidation:**
+
+  **Project: Single-Core MQTT Broker Access Enforcement.**  
+  Identified and resolved a residual concurrency hazard introduced during the MQTT broker integration: the `Adafruit_MQTT_Client` instance was being accessed from two independent execution contexts simultaneously.
+
+  * *The Bottleneck:* `publishTemperature()` executed within the Core 0 cloud worker task, while `maintainMQTT()`—responsible for broker reconnection, keep-alive pings, and inbound packet processing—remained pinned to the default Core 1 execution loop. This left the shared `mqtt` client object exposed to unsynchronized concurrent access across physical cores, mirroring the same class of race condition already mitigated for climate telemetry via the FreeRTOS queue.
+  * *The Engineering Fix:* Relocated the `maintainMQTT()` invocation from the Core 1 `loop()` into the Core 0 `cloudAlertWorker` task, executing it at the top of every task cycle ahead of the queue-blocking call. This confines all `mqtt` object interactions—connection handling, publish operations, and inbound packet polling—exclusively to Core 0, eliminating cross-core access entirely without introducing additional locking primitives. Verified via direct hardware confirmation (`xPortGetCoreID()`) rather than inferred behavior.
+
 * **August 21, 2026 | FreeRTOS Message Queue Integration & Race Condition Elimination:**
 
   **Project: Thread-Safe Inter-Core Climate Data Queue Infrastructure.**  
