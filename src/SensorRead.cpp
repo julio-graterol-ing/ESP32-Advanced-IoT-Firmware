@@ -33,7 +33,7 @@ void updateClimateTelemetry() {
       if (xQueueSend(climateQueue, &localPackage, 0) != pdPASS) {
         Serial.println("[QUEUE-WARN] Climate Queue full. Dropping older frame");
       } else {
-        Serial.printf("[QUEUE-TX] Sent to queue -> Temp: %d, Hum: %d\n", localPackage.temperature, localPackage.humidity);
+        //Serial.printf("[QUEUE-TX] Sent to queue -> Temp: %d, Hum: %d\n", localPackage.temperature, localPackage.humidity);
       }
     }
   }

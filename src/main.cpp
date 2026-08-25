@@ -8,6 +8,7 @@
 #include "secrets.h"
 #include "WiFiClientSecure.h"
 #include "QueueManager.h"
+#include "WatchdogManager.h"
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
 
@@ -103,7 +104,7 @@ void cloudAlertWorker(void * parameter) {
 
         //Block task until data arrives in the queue, checking with a 1000ms max timeout window
         if(xQueueReceive(climateQueue, & receivedData, pdMS_TO_TICKS(1000)) == pdTRUE) {
-            Serial.printf("[QUEUE-RX] Received from queue -> Temp: %d, Hum: %d\n", receivedData.temperature, receivedData.humidity);
+            //Serial.printf("[QUEUE-RX] Received from queue -> Temp: %d, Hum: %d\n", receivedData.temperature, receivedData.humidity);
             //Pass safe local values to network function on core 0
             checkCloudAlerts(receivedData.temperature);
             publishTemperature(receivedData.temperature);
@@ -206,12 +207,24 @@ server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *request){
   request->send(200, "text/plain", String(currentServoAngle));
 });
 
+//Secret engineering route: Simulates a sofware lock to audit hardware reset response
+server.on("/force-freeze", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/plain", "[FATAL] Freezeing main CPU core loo. Watchdog reset shloud trigger in 5s...");
+    Serial.println("[CRITICAl] Secret test endpoint triggered: Entering infinite loop on Core 1...");
+    while(true) {
+        // hard blocking freeze loop to simulate firmware failure
+    }
+});
+
 //Start the underlying network listening daemon
 server.begin();
 Serial.println("[STATUS] Async HTTP Server Engine running");
 
 //Initialize background MQTT client connection parameters
 setupMQTT();
+
+//Initialize and arm the hardware panic switch before multicore deployment
+setupHardwareWatchdog();
 
 //Multi core task creation:
 //Assing the HTTPS alert checking task to core 0 with 16kn of dedicated stack
@@ -232,6 +245,9 @@ Serial.println("[SYSTEM] Multi core architecture initialized. Cloud assigned to 
 
 void loop() {
   unsigned long currentMillis = millis();
+
+  //Tick the countdown timer register back to zero to confirm firmware healt
+  feedHardwareWatchdog();
 
   updateClimateTelemetry();
   
