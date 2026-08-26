@@ -21,6 +21,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **August 25, 2026 | Hardware Task Watchdog Timer Integration & SoC Reset Workaround:**
+
+  **Project: High-Availability Hardware Watchdog Safety Net and ISR Panic Handling.**  
+  Successfully architected and deployed the silicon-level Task Watchdog Timer (TWDT) using the native Espressif SDK (`esp_task_wdt.h`), establishing a 5-second deterministic safety fence against core lockups and firmware freezes.
+
+  * *The Bottleneck:* Setting the native panic argument to `true` forced the CPU to invoke the standard SDK Exception Handler upon core starvation. This process triggered a massive register dump over the serial bus (UART). While Core 1 was trapped in the blocking trace printout, it locked internal communication buses, leaving the independent Wi-Fi physical radio transceivers in an unresolved "zombie" state. Upon the subsequent software reset (`rst:0xc SW_CPU_RESET`), the network stack entered a permanent lockup inside the `while(WiFi.status() != WL_CONNECTED)` validation loop, completely halting autonomous field recovery.
+  * *The Engineering Fix:* Refactored the watchdog initialization sequence by passing a strict `false` panic flag to inhibit the native blocking UART exception dump. Overrode the low-level compilation translation units by introducing a native compiler hook utilizing an externalized C-linkage ISR structure (`extern "C" void esp_task_wdt_isr_user_handler`). The execution sequence intercepts the low-level timer expiration interrupt at an un-trackable register state and instantly fires a bare-metal `esp_restart()` call. This forces a deep Real-Time Clock (RTC) hardware power-cycle across the entire System-on-Chip (SoC), completely wiping corrupt DMA network registers and allowing the firmware to cleanly auto-recover and acquire its local IP address on the very first boot cycle.
+
 * **August 22, 2026 | Cross-Core MQTT Client Consolidation:**
 
   **Project: Single-Core MQTT Broker Access Enforcement.**  
@@ -90,6 +98,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── QueueManager.h     # Thread-safe FreeRTOS Queue infrastructure
 │   ├── SensorRead.h       # Climate telemetry physical interfaces
 │   ├── ServoControl.h     # Dynamic PWM angular drive interfaces
+│   ├── WatchdogManager.h  # Hardware Task Watchdog Timer signatures
 │   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
@@ -97,6 +106,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── QueueManager.cpp   # FreeRTOS hardware-protected queue execution
 │   ├── SensorRead.cpp     # DHT11 sampling and binary payload queue dispatch
 │   ├── ServoControl.cpp   # LEDC hardware clock driver instantiation
+│   ├── WatchdogManager.cpp# Native SoC-Reset Watchdog and ISR implementation
 │   └── main.cpp           # Master 32-bit multi-core orchestrator
 ├── platformio.ini         # Espressif 32-bit dependency & environment core
 └── README.md              # Active IoT engineering portfolio documentation
