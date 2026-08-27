@@ -9,6 +9,8 @@
 #include "WiFiClientSecure.h"
 #include "QueueManager.h"
 #include "WatchdogManager.h"
+#include "FlashManager.h"
+
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
 
@@ -96,6 +98,11 @@ TaskHandle_t CloudTaskHandle = NULL;
 void cloudAlertWorker(void * parameter) {
     ClimateData receivedData;
     Serial.printf("[CORE-CHECK] cloudAlertWorker is running on Core: %d\n", xPortGetCoreID());
+
+    //Retain localized tracking variables to prevent redundant Flash sector writes
+     static int previousSavedTemp = -999;
+     static int previousSavedHum = -999;
+     
     //Secondary infinite loop, isolated from the main thread
     for(;;) {
         //Maintain the MQTT broker socket here instead of in loop
@@ -112,6 +119,13 @@ void cloudAlertWorker(void * parameter) {
             //Update local caches securely within core 0 execution context
             webTemperatureCache = receivedData.temperature;
             webHumidityCache = receivedData.humidity;
+
+            //State change filter: write to non valatile flash only if telemetry drifts
+            if (receivedData.temperature != previousSavedTemp || receivedData.humidity != previousSavedHum) {
+                saveClimateToFlash(receivedData.temperature, receivedData.humidity);
+                previousSavedTemp = receivedData.temperature;
+                previousSavedHum = receivedData.humidity;
+            }
         }
     }
 }
@@ -149,6 +163,10 @@ void setup() {
 
   //Initialize hardware protected communication queue before spawning task
   setupQueueSystem();
+
+  //Mount the flash partition and restore the historical state into caches
+  setupFlashStorage();
+  loadClimateFromFlash(&webTemperatureCache, &webHumidityCache);
 
   setupClimateSensor(); //Initialize DHT11 sensor hardware
 
