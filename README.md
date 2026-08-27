@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **August 28, 2026 | Non-Volatile Storage (NVS) Integration & State-Change Filtering:**
+
+  **Project: Thread-Safe Telemetry Logger with EEPROM/NVS Wear Protection.**  
+  Successfully architected and deployed a non-volatile local caching architecture using the native Espressif `Preferences.h` storage stack, enabling the station to retain historical climate metadata across sudden power outages.
+
+  * *The Bottleneck:* Relying entirely on dynamic RAM caches caused data amnesia upon hardware power cycles or brownouts, leaving AJAX web endpoints and MQTT pipelines at null states until new sensor sample iterations occurred. Furthermore, writing data to physical flash sectors on every loop iteration poses a critical engineering failure, as standard silicon flash cells degrade rapidly if subjected to continuous write cycles.
+  * *The Engineering Fix:* Built an abstraction layer (`FlashManager`) that opens a structured namespace in the chip's physical NVS partition. Implemented a data recovery hook during initialization (`setup()`) to populate local web endpoints instantly before firing network radios. To prevent hardware wear, a localized state-change filter was deployed inside the Core 0 task scope. The firmware compares incoming queue structs against static tracking registries, executing a permanent write (`putInt`) only when a true mathematical drift in temperature or humidity occurs, optimizing memory lifespan and leaving Core 1 entirely free of blocking storage delays.
+  
+
 * **August 25, 2026 | Hardware Task Watchdog Timer Integration & SoC Reset Workaround:**
 
   **Project: High-Availability Hardware Watchdog Safety Net and ISR Panic Handling.**  
@@ -94,6 +103,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 ```text
 ├── include/
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
+│   ├── FlashManager.h     # Non-Volatile Storage (NVS) logger signatures
 │   ├── MqttClient.h       # Dynamic MQTT event routing signatures
 │   ├── QueueManager.h     # Thread-safe FreeRTOS Queue infrastructure
 │   ├── SensorRead.h       # Climate telemetry physical interfaces
@@ -102,6 +112,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
+│   ├── FlashManager.cpp   # NVS partition read/write key-value execution
 │   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
 │   ├── QueueManager.cpp   # FreeRTOS hardware-protected queue execution
 │   ├── SensorRead.cpp     # DHT11 sampling and binary payload queue dispatch
@@ -110,6 +121,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   └── main.cpp           # Master 32-bit multi-core orchestrator
 ├── platformio.ini         # Espressif 32-bit dependency & environment core
 └── README.md              # Active IoT engineering portfolio documentation
+
 
 ```
 
