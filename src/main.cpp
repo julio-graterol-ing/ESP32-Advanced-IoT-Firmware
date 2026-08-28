@@ -10,6 +10,7 @@
 #include "QueueManager.h"
 #include "WatchdogManager.h"
 #include "FlashManager.h"
+#include "OtaManager.h"
 
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
@@ -105,6 +106,11 @@ void cloudAlertWorker(void * parameter) {
      
     //Secondary infinite loop, isolated from the main thread
     for(;;) {
+
+        //Constinuously poll the Wifi network socket for incoming dynamic update binaries
+        handleWirelessOTA();
+
+
         //Maintain the MQTT broker socket here instead of in loop
         // MQTT object is only ever touched from this single (core 0)
         maintainMQTT();
@@ -200,6 +206,9 @@ Serial.print("[DEBUG] Subnet Mask: ");
 Serial.println(WiFi.subnetMask());
 Serial.print("[DEBUG] DNS IP: ");
 Serial.println(WiFi.dnsIP());
+
+//Trigger the network bootloader server engine after connection is secure
+setupWirelessOTA();
 
 //Run outbound connectivity diagnostic
 testInternetReachable();
