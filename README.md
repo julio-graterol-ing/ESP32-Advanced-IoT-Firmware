@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **August 29, 2026 | Secure Over-The-Air (OTA) Bootloader Integration:**
+
+  **Project: Remote Wireless Firmware Deployment and Partition Management.**  
+  Successfully architected and deployed a network-driven firmware deployment subsystem using the native `ArduinoOTA.h` core engine, cutting the physical dependency on local USB data connections.
+
+  * *The Bottleneck:* Field-deployed industrial IoT microcontrollers are often mounted in isolated or sealed enclosures where direct USB tethering for diagnostics or updates is physically impossible. Additionally, executing massive binary socket transfers over wireless links risks critical system fragmentation or complete corruption ("bricking") if the network link experiences signal attenuation or drops mid-transmission.
+  * *The Engineering Fix:* Structured a dedicated network bootloader layer (`OtaManager`) mapped directly into the virtual dual-partition mapping (`app0` / `app1`) of the ESP32 Flash memory. The update polling sequence (`handleWirelessOTA()`) was pinned exclusively onto Core 0 inside the asynchronous cloud execution context to maintain high-speed network socket polling without introducing latency to the master Core 1 control timeline. The underlying bootloader engine monitors incoming binary streams on port 3232, writes packets dynamically to the passive partition block, verifies structural checksum integrity upon transmission completion, and forces a deep automated SoC power-cycle to cleanly wake up on the newly targeted execution slot.
+
+
 * **August 28, 2026 | Non-Volatile Storage (NVS) Integration & State-Change Filtering:**
 
   **Project: Thread-Safe Telemetry Logger with EEPROM/NVS Wear Protection.**  
@@ -105,6 +114,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
 │   ├── FlashManager.h     # Non-Volatile Storage (NVS) logger signatures
 │   ├── MqttClient.h       # Dynamic MQTT event routing signatures
+│   ├── OtaManager.h       # Secure Over-The-Air (OTA) wireless signatures
 │   ├── QueueManager.h     # Thread-safe FreeRTOS Queue infrastructure
 │   ├── SensorRead.h       # Climate telemetry physical interfaces
 │   ├── ServoControl.h     # Dynamic PWM angular drive interfaces
@@ -114,6 +124,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
 │   ├── FlashManager.cpp   # NVS partition read/write key-value execution
 │   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
+│   ├── OtaManager.cpp     # Network bootloader listener callback execution
 │   ├── QueueManager.cpp   # FreeRTOS hardware-protected queue execution
 │   ├── SensorRead.cpp     # DHT11 sampling and binary payload queue dispatch
 │   ├── ServoControl.cpp   # LEDC hardware clock driver instantiation
