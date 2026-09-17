@@ -21,6 +21,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **September 16, 2026 | Bare-Metal 5461AS Display Driver & Asynchronous Multiplexing:**
+
+  **Project: 4-Digit 7-Segment Real-Time Multiplexed Indicator.**  
+  Successfully engineered and deployed a low-level bare-metal software driver to orchestrate a 5461AS common-cathode display, avoiding the use of external blocking libraries and achieving clean visual persistence.
+
+  * *The Bottleneck:* Standard display libraries rely heavily on hard `delay()` blocks to maintain visible segment states, which introduces severe CPU core starvation. If integrated alongside high-frequency servo kinematics (15ms) and slow environmental sensor buses (250ms), static delays cause immediate visual flicker, core panic freezes, and jitter on physical actuators. Furthermore, early hardware schematics had to be re-routed dynamically to bypass active GPIO lines already assigned to network telemetry.
+  * *The Engineering Fix:* Designed a hardware lookup table (LUT) using binary bitmasks mapped directly over a dedicated array of 8 digital anode outputs. Implemented a non-blocking asynchronous state engine inside the main Core 1 timeline. The system shifts active digit cathodes every 4ms using time-slicing logic (`millis()`), forcing a full 16ms refresh cycle (~62.5 Hz). This leverages human retinal persistence to project a steady "1234" matrix while maintaining absolute hardware protection by limiting currents safely below the 12mA Espressif silicon breakdown threshold through 220Ω precision resistors.
+
 * **August 29, 2026 | Secure Over-The-Air (OTA) Bootloader Integration:**
 
   **Project: Remote Wireless Firmware Deployment and Partition Management.**  
@@ -112,6 +120,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 ```text
 ├── include/
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
+│   ├── DisplayMultiplex.h # Bare-metal 5461AS display driver signatures
 │   ├── FlashManager.h     # Non-Volatile Storage (NVS) logger signatures
 │   ├── MqttClient.h       # Dynamic MQTT event routing signatures
 │   ├── OtaManager.h       # Secure Over-The-Air (OTA) wireless signatures
@@ -122,6 +131,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   └── secrets.h          # Secured compilation definitions (gitignored)
 ├── src/
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
+│   ├── DisplayMultiplex.cpp # Low-level 7-segment layout logic and LUT execution
 │   ├── FlashManager.cpp   # NVS partition read/write key-value execution
 │   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
 │   ├── OtaManager.cpp     # Network bootloader listener callback execution
