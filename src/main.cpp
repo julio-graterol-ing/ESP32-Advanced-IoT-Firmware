@@ -27,10 +27,6 @@ unsigned long previousServoMillis = 0;
 const unsigned long SERVO_INTERVAL = 15; //Update kinematic every 15ms
 bool remoteControlActive = false; //when true, disables the automatic sweep so MQTT take full control
 
-unsigned long previousDisplayMillis = 0;
-const unsigned long DISPLAY_INTERVAL = 4; //Update display every 4ms
-uint8_t activateDigitSlot = 0;
-
 //Embedded high performance HTML js ui source code
 const char index_html[] PROGMEM = R"rawliteral(
 <!DOCTYPE html>
@@ -275,6 +271,16 @@ xTaskCreatePinnedToCore(
 
 Serial.println("[SYSTEM] Multi core architecture initialized. Cloud assigned to core 0");
 
+//Instatiate high priority display Thread pinned to master application Core 1
+xTaskCreatePinnedToCore(
+    displayUpdateTask, //Function that runs the task
+    "DisplayTask", //Task name
+    4096, //Stack size allocated in bytes
+    NULL, //Input parameters pointer
+    3, //Critical real time priority level
+    NULL, //Task handle pointer
+    1 //Core ID
+);
 }
 
 
@@ -296,30 +302,5 @@ void loop() {
     }
 
     writeServoAngle(currentServoAngle); //Directly inject new angle
-  }
-
-  //Asynchronous real time display multiplexing engine
-  //Comute the active digit slot every 4ms without introducing CPU blocking delays
-  if (currentMillis - previousDisplayMillis >= DISPLAY_INTERVAL) {
-    previousDisplayMillis = currentMillis;
-    
-    switch (activateDigitSlot) {
-        case 0: 
-            projectDigitToSlot(0, 1); //Project character '1' onto Digit 1
-            activateDigitSlot = 1;
-            break;
-        case 1:
-            projectDigitToSlot(1, 2); //Project character '2' onto Digit
-            activateDigitSlot = 2;
-            break;
-        case 2:
-            projectDigitToSlot(2, 3); //Project character '3' onto Digit
-            activateDigitSlot = 3;
-            break;
-        case 3:
-            projectDigitToSlot(3, 4); //Project character '4' onto Digit
-            activateDigitSlot = 0;
-            break;
-    }
   }
 }

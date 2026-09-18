@@ -18,4 +18,7 @@ void clearDisplay();
 //Render a raw numerical character array onto a single designated digit slot
 void projectDigitToSlot(uint8_t digitIndex, uint8_t numberValue);
 
+//FreeRtos task worker responsible for hihg priority display refreshing
+void displayUpdateTask(void *parameter);
+
 #endif //DisplayMultiplex_h

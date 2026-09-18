@@ -67,3 +67,37 @@ void projectDigitToSlot(uint8_t digitIndex, uint8_t numberValue) {
     //Phase C: Selectively activate the common cathode ground return pin for the targeted digit slot
     digitalWrite(DIGIT_PINS[digitIndex], LOW); 
 }
+
+void displayUpdateTask(void *parameter) {
+    uint8_t activeDigitSlot = 0;
+    const TickType_t xDelay4ms = pdMS_TO_TICKS(4);
+
+    //continous real time scheduling loop for Core 1 execution context
+    for(;;) {
+        switch (activeDigitSlot) {
+            case 0:
+                projectDigitToSlot(0, 1);
+                activeDigitSlot = 1;
+                break;
+
+            case 1:
+                projectDigitToSlot(1, 2);
+                activeDigitSlot = 2;
+                break;
+
+            case 2:
+                projectDigitToSlot(2, 3); 
+                activeDigitSlot = 3;
+                break;
+
+            case 3:
+                projectDigitToSlot(3, 4);
+                activeDigitSlot = 0;
+                break;
+
+        }
+
+        //Block the task exactly 4 milliseconds to allow the other task to run
+        vTaskDelay(xDelay4ms);
+    }
+}
