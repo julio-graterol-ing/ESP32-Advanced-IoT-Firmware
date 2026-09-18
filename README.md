@@ -21,6 +21,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **September 18, 2026 | FreeRTOS Task Encapsulation & Real-Time Clock Scheduling:**
+
+  **Project: Core 1 Pinned High-Priority Display Refresher.**  
+  Successfully migrated the bare-metal multiplexing state machine into an isolated, independent FreeRTOS task context (`displayUpdateTask`) running deterministically on Core 1.
+
+  * *The Bottleneck:* Running display multiplexing inside the shared main `loop()` leaves the visual refresh rate vulnerable to clock congestion. If peripheral events—such as dynamic servo adjustments or hardware telemetry polling—introduce unexpected latency spikes, the 4ms time-slicing window breaks down, inducing severe visual flicker and hardware ghosting.
+  * *The Engineering Fix:* Abstracted the lookup table (LUT) and slot projection execution out of the application loop and instantiated a native FreeRTOS thread via `xTaskCreatePinnedToCore()`. The routine is pinned to Core 1 with a high-priority level (Priority 3), placing it strictly above the standard actuator sweep. By utilizing the kernel's native `vTaskDelay()` blocking API instead of polling ticks, the display task completely yields the CPU back to the scheduler for exactly 4ms. This guarantees a rock-solid ~62.5 Hz refresh frequency with zero visual artifacts, regardless of background actuator or sensor utilization.
+
 * **September 16, 2026 | Bare-Metal 5461AS Display Driver & Asynchronous Multiplexing:**
 
   **Project: 4-Digit 7-Segment Real-Time Multiplexed Indicator.**  
