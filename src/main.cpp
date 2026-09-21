@@ -12,6 +12,7 @@
 #include "FlashManager.h"
 #include "OtaManager.h"
 #include "DisplayMultiplex.h"
+#include "AdcFilter.h"
 
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
@@ -182,6 +183,9 @@ void setup() {
 
   //Initialize 5461AS display driver hardware
   setupDisplayHardware();   
+  
+  //Initialize ADC hardware for analog input
+  setupAdcHardware(); 
 
   //Trigger internal Wifi hardware peripheral
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
@@ -303,4 +307,7 @@ void loop() {
 
     writeServoAngle(currentServoAngle); //Directly inject new angle
   }
+
+  //continuously capture raw analog samples and pass them through the rolling filter
+  uint16_t currentSatabilizedVoltage = getFilteredAdcValue();
 }
