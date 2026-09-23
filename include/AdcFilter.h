@@ -4,7 +4,7 @@
 #include <Arduino.h>
 
 //Specific analog input pin configuraed for hardwareADC1 channel 6
-#define ANALOG_INPUT_PIN 34
+#define ANALOG_INPUT_PIN 32
 
 //Total window size allocated for the rolling moving average buffer array
 #define FILTER_WINDOW_SIZE 16

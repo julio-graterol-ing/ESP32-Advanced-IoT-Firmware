@@ -309,5 +309,20 @@ void loop() {
   }
 
   //continuously capture raw analog samples and pass them through the rolling filter
-  uint16_t currentSatabilizedVoltage = getFilteredAdcValue();
+  uint16_t currentStabilizedVoltage = getFilteredAdcValue();
+
+  //Static tracking to retain the last successfully broadcasted value across loops
+  static uint16_t lastBroadcastedVoltage = 0;
+
+  //Hysteresis threshold filter to suppress thermal noise and LSB quantization jitter
+  const uint8_t hysteresisThreshold = 8;
+
+  //Calculate the absolute mathematical drift between current sample and last base line
+  if (abs((int)currentStabilizedVoltage - (int)lastBroadcastedVoltage) >= hysteresisThreshold) {
+    lastBroadcastedVoltage = currentStabilizedVoltage;
+
+    //Push the clean 12 bit voltage sample into the thread safe queue
+  xQueueSend(potentiometerQueue, &currentStabilizedVoltage, 0);
+
+  }
 }
