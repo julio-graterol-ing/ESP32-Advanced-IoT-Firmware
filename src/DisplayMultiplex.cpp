@@ -1,4 +1,5 @@
 #include "DisplayMultiplex.h"
+#include "QueueManager.h"
 
 //Mapping: [A=D23, B=D22, C=D19, D=D2, E=D21, F=TX2, G=RX2, DP=D5
 const uint8_t SEGMENT_PINS[8] = {23, 22, 19, 2, 21, 17, 16, 5};
@@ -70,28 +71,39 @@ void projectDigitToSlot(uint8_t digitIndex, uint8_t numberValue) {
 
 void displayUpdateTask(void *parameter) {
     uint8_t activeDigitSlot = 0;
+    uint16_t sharedPotentiometerValue = 0;
+    uint8_t targetDigits[4] = {0, 0, 0, 0};
     const TickType_t xDelay4ms = pdMS_TO_TICKS(4);
 
     //continous real time scheduling loop for Core 1 execution context
     for(;;) {
+        //Non blocking poll attempt to extract the latest 12 bit sample from the hardware queue
+        if (xQueueReceive(potentiometerQueue, &sharedPotentiometerValue, 0) == pdTRUE) {
+            //Decompose the 12 bit ADC sample into individual decimal digits for display projection
+            targetDigits[0] = (sharedPotentiometerValue / 1000) % 10; //Thousands place
+            targetDigits[1] = (sharedPotentiometerValue / 100) % 10;  //Hundreds place
+            targetDigits[2] = (sharedPotentiometerValue / 10) % 10;   //Tens place
+            targetDigits[3] = sharedPotentiometerValue % 10;          //Units place
+        }
+
         switch (activeDigitSlot) {
             case 0:
-                projectDigitToSlot(0, 1);
+                projectDigitToSlot(0, targetDigits[0]);
                 activeDigitSlot = 1;
                 break;
 
             case 1:
-                projectDigitToSlot(1, 2);
+                projectDigitToSlot(1, targetDigits[1]);
                 activeDigitSlot = 2;
                 break;
 
             case 2:
-                projectDigitToSlot(2, 3); 
+                projectDigitToSlot(2, targetDigits[2]);
                 activeDigitSlot = 3;
                 break;
 
             case 3:
-                projectDigitToSlot(3, 4);
+                projectDigitToSlot(3, targetDigits[3]);
                 activeDigitSlot = 0;
                 break;
 

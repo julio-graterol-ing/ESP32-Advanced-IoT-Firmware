@@ -13,6 +13,9 @@ struct ClimateData {
 //global external handle to access the safe registry from other modules
 extern QueueHandle_t climateQueue;
 
+//Global external handle to route potentiometer metrics across threads
+extern QueueHandle_t potentiometerQueue; 
+
 void setupQueueSystem();
 
 #endif //QUEUE_MANAGER_H
