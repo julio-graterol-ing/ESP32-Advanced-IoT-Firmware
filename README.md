@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **September 24, 2026 | FreeRTOS Inter-Task Queue Communication & Hardware EMI Mitigation:**
+
+  **Project: Thread-Safe Telemetry Routing Pipeline with Software Hysteresis.**  
+  Successfully established an inter-task FreeRTOS messaging queue (`potentiometerQueue`) to stream clean 12-bit ADC metrics directly from the application loop to the Core 1 display driver thread.
+
+  * *The Bottleneck:* Activating high-frequency inductive actuators like the SG90 servo motor introduces severe electromagnetic interference (EMI) and instant localized power drops (micro-brownouts) along the shared breadboard voltage tracks. This electrical noise shifts the ADC reference limits dynamically, falsifying physical telemetry readouts (producing random spikes up to ±150 ticks) and inducing aggressive data flickering on the 7-segment display cells.
+  * *The Engineering Fix:* Built a zero-overhead data routing pipeline using native `xQueueSend()` and `xQueueReceive()` API calls with 0ms block thresholds, preventing cross-core race conditions without creating pipeline congestion. Due to hardware starter kit inventory limits (absence of large electrolytic decoupling capacitors), deployed a strict algorithmic firmware hysteresis filter (`hysteresisThreshold = 200`). The logic halts background data transmission entirely until a definitive mechanical position shift overrides the electro-magnetic noise floor, securing a rock-solid visual readout across all display digits.
+
+
 * **September 21, 2026 | Digital Signal Processing (DSP) & Moving Average ADC Filtering:**
 
   **Project: Low-Pass Software Filter for Electro-Magnetic Noise Suppression.**  
