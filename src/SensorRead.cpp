@@ -8,6 +8,9 @@ DHT dht (DHTPIN, DHTTYPE);
 unsigned long previousDHTMillis = 0;
 const unsigned long DHT_INTERVAL = 2000; // Update interval for DHT sensor readings
 
+//instantie global climate storage registers to export metadata across module
+int currentTemperature = 0;
+int currentHumidity = 0;
 
 void setupClimateSensor() {
   dht.begin(); // Initialize the DHT sensor
@@ -28,6 +31,9 @@ void updateClimateTelemetry() {
       ClimateData localPackage;
       localPackage.temperature = (int)(t);
       localPackage.humidity = (int)(h);
+
+      currentTemperature = localPackage.temperature;
+      currentHumidity = localPackage.humidity;
 
       //Push data structure to queue with 0ms block time if full to avoid freezzing core 1
       if (xQueueSend(climateQueue, &localPackage, 0) != pdPASS) {
