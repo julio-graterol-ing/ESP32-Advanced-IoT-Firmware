@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **September 27, 2026 | Asynchronous Local Telemetry Dashboard & Alphabetical LUT Expansion:**
+
+  **Project: Multi-View Time-Sliced Physical Telemetry Display System.**  
+  Successfully engineered and deployed an automated, non-blocking 3-second state sequencing engine within the Core 1 display thread context to alternate real-time data views.
+
+  * *The Bottleneck:* Standard multi-view instrumentation setups rely on manual polling loops or hardware buttons to cycle data. Integrating sequential 3000ms display views via legacy blocking methods causes instantaneous CPU core stall, immediately breaking the 4ms multiplexing window, killing the active servo PWM clocks, and freezing network communication streams.
+  * *The Engineering Fix:* Expanded the hardware seven-segment lookup table (LUT) registry to support custom alphabetical bitmasks for status indicators ('t' for Temperature, 'H' for Humidity, and 'Blank' for layout masking). Implemented a thread-safe global linkage to export live DHT11 metrics (`currentTemperature` and `currentHumidity`) directly from the asynchronous sensor task. Utilizing a non-blocking scheduling condition based on kernel uptime ticks (`xTaskGetTickCount()`), the display task seamlessly rotates views between Potenciómetro (ADC), Temperature, and Humidity every 3000ms while sustaining a continuous, rock-solid ~62.5 Hz refresh frequency with zero visual drift.
+  
+
 * **September 24, 2026 | FreeRTOS Inter-Task Queue Communication & Hardware EMI Mitigation:**
 
   **Project: Thread-Safe Telemetry Routing Pipeline with Software Hysteresis.**  

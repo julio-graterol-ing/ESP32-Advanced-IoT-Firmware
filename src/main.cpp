@@ -315,7 +315,7 @@ void loop() {
   static uint16_t lastBroadcastedVoltage = 0;
 
   //Hysteresis threshold filter to suppress thermal noise and LSB quantization jitter
-  const uint8_t hysteresisThreshold = 8;
+  const uint8_t hysteresisThreshold = 200;
 
   //Calculate the absolute mathematical drift between current sample and last base line
   if (abs((int)currentStabilizedVoltage - (int)lastBroadcastedVoltage) >= hysteresisThreshold) {
