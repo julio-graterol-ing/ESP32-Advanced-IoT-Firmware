@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **September 29, 2026 | Multi-Core Inter-Thread Hardware Injection & Asynchronous MQTT Routing:**
+
+  **Project: Dual-Core Telemetry Sync over Secure Broker Feeds with Clock Decoupling.**  
+  Successfully engineered and deployed an asynchronous inter-core data pipeline routing 12-bit filtered potentiometer telemetry from the Core 1 application loop to the Core 0 network scheduler for cloud ingestion.
+
+  * *The Bottleneck:* Instantiating direct network calls or broker publication commands inside high-frequency local application loops creates critical task synchronization conflicts. Sharing a single publication timestamp registry (`lastMqttPublish`) between independent environment streams induced immediate timeline cross-talk, locking out data updates mid-execution and truncating data down to an 8-bit overflow boundary static state (255 ticks) under campus subnet constraints.
+  * *The Engineering Fix:* Refactored the core network broker engine (`MqttClient`) to instantiate a fully decoupled clock tracking registry (`lastPotMqttPublish`) running alongside explicit 32-bit type-casting (`uint32_t`). Telemetry metrics bypass physical core boundaries cleanly via thread-safe structures to feed a dedicated cloud channel (`/feeds/potentiometer`). This architecture shields local servo kinematics and multiplexed display grids from network latency spikes while enforcing an asynchronous anti-spam threshold to maintain reliable wireless data ingestion under shifting network routing states.
+  
+
 * **September 27, 2026 | Asynchronous Local Telemetry Dashboard & Alphabetical LUT Expansion:**
 
   **Project: Multi-View Time-Sliced Physical Telemetry Display System.**  
