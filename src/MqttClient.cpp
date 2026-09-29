@@ -18,13 +18,16 @@ Adafruit_MQTT_Client mqtt(&client, mqtt_server, mqtt_port, AIO_USERNAME, AIO_KEY
 //Rubtime buffer to hold the constructed feed paths
 static char temperatureFeedPath[64];
 static char servoFeedPath[64];
+static char potentiometerFeedPath[64];
 
 //Outbound/Inbound feed pointers built at runtime inside SetupMQTT
 Adafruit_MQTT_Publish* temp_feed = nullptr;
 Adafruit_MQTT_Subscribe* servo_feed = nullptr;
+Adafruit_MQTT_Publish* pot_feed = nullptr;
 
 //Antispa, scheduling guard for cloud publication
 unsigned long lastMqttPublish = 0;
+unsigned long lastPotMqttPublish = 0;
 const unsigned long MQTT_PUBLISH_INTERVAL = 20000; //Account constraint: 20 seconds minimum
 
 //Internal routine to handle secure and non blocking broker reconnection sequences
@@ -55,9 +58,11 @@ void setupMQTT() {
     //Build the feed paths at runtime now that AIO_USERNAME holds a real value
     snprintf(temperatureFeedPath, sizeof(temperatureFeedPath), "%s/feeds/temperature", AIO_USERNAME);
     snprintf(servoFeedPath, sizeof(servoFeedPath), "%s/feeds/servo_control", AIO_USERNAME);
+    snprintf(potentiometerFeedPath, sizeof(potentiometerFeedPath), "%s/feeds/potentiometer", AIO_USERNAME);
 
     temp_feed = new Adafruit_MQTT_Publish(&mqtt, temperatureFeedPath);
     servo_feed =new Adafruit_MQTT_Subscribe(&mqtt, servoFeedPath);
+    pot_feed = new Adafruit_MQTT_Publish(&mqtt,potentiometerFeedPath);
 
     //Bind the callback function upon inbound cloud packet arrivals
     servo_feed->setCallback([](uint32_t angle) {
@@ -98,6 +103,20 @@ void publishTemperature(int temperature) {
         Serial.printf("[MQTT] Dispatched telemetry -> Temp %d C\n", temperature);
         if (!temp_feed->publish(temperature)) {
             Serial.println("[ERROR] MQTT telemetry packet dropped by broker");
+        }
+    }
+}
+
+void publishPotentiometer(int adcValue) {
+    if(!mqtt.connected() || pot_feed == nullptr) return;
+
+    unsigned long currentMillis = millis();
+    if (currentMillis - lastPotMqttPublish >= MQTT_PUBLISH_INTERVAL || lastPotMqttPublish == 0) {
+        lastPotMqttPublish = currentMillis;
+
+        Serial.printf("[MQTT] Dispatched telemetry -> potentiometer: %d\n", adcValue);
+        if (!pot_feed->publish((uint32_t)adcValue)) {
+            Serial.println("[ERROR] MQTT potentiometer packet dropped by broker");
         }
     }
 }
