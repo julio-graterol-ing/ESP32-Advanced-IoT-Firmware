@@ -10,5 +10,7 @@ void maintainMQTT();
 
 void publishTemperature(int temperature);
 
+void publishPotentiometer(int adcValue);
+
 #endif //MQTT_CLIENT_H
 

@@ -324,5 +324,8 @@ void loop() {
     //Push the clean 12 bit voltage sample into the thread safe queue
   xQueueSend(potentiometerQueue, &currentStabilizedVoltage, 0);
 
+  //Transmit the clean 12bit analog readout to the Adafruit IO broker cloud
+  publishPotentiometer(currentStabilizedVoltage);
+
   }
 }
