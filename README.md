@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **October 01, 2026 | Asynchronous HTTP Web Bypass & Input Multiplexing Logic:**
+
+  **Project: Dual-Mode Local/Remote Actuator Controller.**  
+  Successfully engineered a software-defined multiplexer controlled asynchronously via an embedded HTTP POST endpoint (`/set-bypass`) to dynamically shift the servo input source.
+
+  * *The Bottleneck:* Standard remote override controllers execute synchronous checks or thread blockades to preempt physical hardware behaviors. Doing so inside multi-core loops immediately stalls adjacent timing-critical pipelines, causing flickering over the 4ms multiplexed display grids and introducing erratic jitter on high-frequency servo PWM clock signals.
+  * *The Engineering Fix:* Refactored the master orchestrator (`main.cpp`) to deploy an isolated asynchronous state variable (`webBypassMode`). Integrated a sanitized, high-performance HTML/JS UI button that dispatches non-blocking web requests to coordinate state machine transitions. When toggled to LOCAL mode, the core bypasses autonomous cinematic oscillations entirely and dynamically scales the clean 12-bit ADC voltage inputs (0-4095) into precise real-time angular metrics (0-180º). This ensures absolute bare-metal synchronization from physical hand movements to local actuators without stalling background FreeRTOS tasks.
+
+
 * **September 29, 2026 | Multi-Core Inter-Thread Hardware Injection & Asynchronous MQTT Routing:**
 
   **Project: Dual-Core Telemetry Sync over Secure Broker Feeds with Clock Decoupling.**  
