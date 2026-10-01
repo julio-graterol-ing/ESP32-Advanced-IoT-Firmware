@@ -27,6 +27,7 @@ int sweepDirection = 1;
 unsigned long previousServoMillis = 0;
 const unsigned long SERVO_INTERVAL = 15; //Update kinematic every 15ms
 bool remoteControlActive = false; //when true, disables the automatic sweep so MQTT take full control
+bool webBypassMode = false; // when true servo tracks the potemtiometer directly ignoring automated sweeps
 
 //Embedded high performance HTML js ui source code
 const char index_html[] PROGMEM = R"rawliteral(
@@ -63,29 +64,40 @@ const char index_html[] PROGMEM = R"rawliteral(
         <div class="label">Servo Motor Position</div>
         <div class="metric actuator"><span id="servo">0</span>&deg;</div>
         <div class="label">Kinematic Angle</div>
+        <button class="btn" id="bypassBtn" onclick="toggleBypassMode()">Bypass Mode</button>
     </div>
 
     <script>
-        //High speed asynchonous routine to fetch sensor endpoints without reloading
-        function updateTelemetry() {
-            fetch('/temperature').then(response => response.text()).then(data => {
-                document.getElementById('temp').innerText = data;
-            });
-
-            fetch('/humidity').then(response => response.text()).then (data => {
-                document.getElementById('hum').innerText = data;
-            });
-
-        }
-
-        //New petition to fetch servo actuator position
-        function updateActuatorState() {
-            fetch('/servo').then(response => response.text()).then(data => {
-                document.getElementById('servo').innerText = data;
-            });
-         }
-
-        
+    function updateTelemetry() {
+        fetch('/temperature').then(response => response.text()).then(data => {
+            document.getElementById('temp').innerText = data;
+        });
+        fetch('/humidity').then(response => response.text()).then(data => {
+            document.getElementById('hum'). innerText = data;
+         });
+    }
+    
+    function updateActuartorState() {
+        fetch('/servo').then(response => response.text()).then(data => {
+            document.getElementById('servo').innerText = data;
+        });
+     
+        fetch('/get-bypass').then(response => response.text()).then(status => {
+            const btn = document.getElementById('bypassBtn');
+            if (status === "1") {
+                btn.innerText = "Bypass Mode: LOCAL";
+                btn.classList.add("active");
+                } else {
+                 btn.innerText = "Byspass Mode: REMOTE";
+                 btn.classList.add("btn-active");
+                 }
+        });
+    }
+    
+    function toggleBypassMode() {
+        fetch('/set-bypass', { method: 'POST' }).then(() => updateActuatorState());
+    }
+    
         //Instantie steady execution interval scheduler every 2000ms
         setInterval(updateTelemetry, 2000);
         setInterval(updateActuatorState, 150); //Sincronize servo actuator position with high frequency
@@ -242,6 +254,22 @@ server.on("/servo", HTTP_GET, [](AsyncWebServerRequest *request){
   request->send(200, "text/plain", String(currentServoAngle));
 });
 
+//Gataway Route: Fetch the active hardware bypass logic state
+server.on("/get-bypass", HTTP_GET, [](AsyncWebServerRequest *request){
+    request->send(200, "text/plain", webBypassMode ? "1" : "0");
+
+});
+
+//Gatawey Route: Asynchronously toggle the core bypass state from user input events
+server.on("/set-bypass", HTTP_POST, [](AsyncWebServerRequest *request){
+    webBypassMode = !webBypassMode;
+    if (webBypassMode) {
+        remoteControlActive = false; // Disable cloud MQTT lock when enforcing local hardware tracking
+
+    }
+    request->send(200, "text/plain", "OK");
+});
+
 //Secret engineering route: Simulates a sofware lock to audit hardware reset response
 server.on("/force-freeze", HTTP_GET, [](AsyncWebServerRequest *request) {
     request->send(200, "text/plain", "[FATAL] Freezeing main CPU core loo. Watchdog reset shloud trigger in 5s...");
@@ -294,10 +322,23 @@ void loop() {
   //Tick the countdown timer register back to zero to confirm firmware healt
   feedHardwareWatchdog();
 
+  uint16_t currentStabilizedVoltage = getFilteredAdcValue();
+
   updateClimateTelemetry();
+
+  //Multiplexed input slection matrix controlling the servo kinematic execution
+  if (webBypassMode) {
+    //local BypassMode: Sacle the clean 12 bit voltage input straight to angular metrics
+    int calculateAngle = (int)((currentStabilizedVoltage * 180) / 4095);
+
+    if (calculateAngle != currentServoAngle) {
+      currentServoAngle = calculateAngle;
+      writeServoAngle(currentServoAngle);
+    }
+  }
   
   //Asynchronous kinematic servo sweep 
-  if (!remoteControlActive && currentMillis - previousServoMillis >= SERVO_INTERVAL) {
+  else if (!remoteControlActive && currentMillis - previousServoMillis >= SERVO_INTERVAL) {
     previousServoMillis = currentMillis;
     currentServoAngle += sweepDirection;
 
@@ -308,8 +349,6 @@ void loop() {
     writeServoAngle(currentServoAngle); //Directly inject new angle
   }
 
-  //continuously capture raw analog samples and pass them through the rolling filter
-  uint16_t currentStabilizedVoltage = getFilteredAdcValue();
 
   //Static tracking to retain the last successfully broadcasted value across loops
   static uint16_t lastBroadcastedVoltage = 0;
