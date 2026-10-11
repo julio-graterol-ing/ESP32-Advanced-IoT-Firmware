@@ -13,6 +13,7 @@
 #include "OtaManager.h"
 #include "DisplayMultiplex.h"
 #include "AdcFilter.h"
+#include "I2CDriver.h"
 
 
 AsyncWebServer server (80); //Establish local internet server on standard HTTP
@@ -198,6 +199,9 @@ void setup() {
   
   //Initialize ADC hardware for analog input
   setupAdcHardware(); 
+
+  //Initialize I2C bare metal driver for low level hardware access
+  initI2CBareMetal();
 
   //Trigger internal Wifi hardware peripheral
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
