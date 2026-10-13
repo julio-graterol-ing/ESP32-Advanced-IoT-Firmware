@@ -21,6 +21,14 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **October 13, 2026 | Native Low-Level I2C Interface Configuration & IO MUX Mapping:**
+
+  **Project: Bare-Metal Peripheral Drivers without Layer Abstraction.**  
+  Successfully developed and integrated a hardware-level I2C master driver by accessing direct silicon memory registries (`0x3ff53000`) on the ESP32 to establish communication with an industrial BMP280/BME280 sensor.
+
+  * *The Bottleneck:* Relying on soft bit-banging implementations (`digitalWrite` sequences with software microsecond delay macros) generates loose timing gaps and clock distortion over loose copper breadboard connections. Without active signal polarities, lines enter a floating floating state, causing sequential transmission dropouts and continuous double `NACK` errors on the bus.
+  * *The Engineering Fix:* Refactored the core driver module (`I2CDriver`) to completely drop high-level abstractions. Configured bare-metal control blocks (`I2C0_CTR_REG`) to activate dedicated hardware master pipelines running at 100kHz standard speed via explicit registry matches (`I2C0_SCL_LOW_PERIOD_REG = 400`). Enforced strict internal impedance polarization using `INPUT_PULLUP` flags to stabilize the electrical idle state at 3.3V. Outbound data blocks are dynamically routed via index pointer arithmetic on the hardware command link stack (`*(I2C0_CMD_BASE_REG + index)`). This implementation guarantees pure silicon execution, catching the real physical ACK from the modular 4-pin device without disturbing concurrent FreeRTOS multiplexed displays.
+
 * **October 01, 2026 | Asynchronous HTTP Web Bypass & Input Multiplexing Logic:**
 
   **Project: Dual-Mode Local/Remote Actuator Controller.**  
