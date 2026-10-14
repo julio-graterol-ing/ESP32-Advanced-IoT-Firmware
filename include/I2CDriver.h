@@ -14,11 +14,19 @@
 #define I2C0_CTR_REG             ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x001C))
 #define I2C0_INT_CLR_REG         ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x0024))
 #define I2C0_CMD_BASE_REG        ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x005C))
+#define I2C0_DATA_FIFO_REG       ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x001C))
 
 /**
  * @brief Configures native hardware registers to initialize the I2C bus at 100kHz.
  * Executes a hardware-level register probe to detect the industrial sensor.
  */
 void initI2CBareMetal();
+
+bool writeI2CBareMetal(uint8_t deviceAddr, uint8_t regAddr, uint8_t value);
+
+bool readI2CBareMetal(uint8_t deviceAddr, uint8_t regAddr, uint8_t* buffer, uint8_t length);
+
+int32_t readBmp280TemperatureBareMetal();
+
 
 #endif // I2C_DRIVER_H

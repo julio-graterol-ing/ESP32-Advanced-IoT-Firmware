@@ -48,9 +48,87 @@ void initI2CBareMetal() {
     if (!(interruptStatus & (1 << 10))) {
         Serial.println("[HARDWARE-SUCCESS] BMP280 Industrial Sensor verified! Real ACK captured on lines.");
         Serial.println("[STATUS] Bus operational. Ready for bit-shifting data registers.");
+    
+        // inject 0x3F oversampling x1 Temp, x1 Press and force normal mode
+        writeI2CBareMetal(0x76, 0xF4, 0x3F);
+        Serial.println ("[SENSOR] BMP280 forced to normal mode");
+    
     } else {
         Serial.println("[WARNING] Bus responded with hardware NACK. Verify line capacitance or device address.");
         // Clear error flags to avoid blocking or freezing the hardware bus state machine
         *I2C0_INT_CLR_REG = 0xFFFFFFFF;
     }
+}
+
+bool writeI2CBareMetal(uint8_t deviceAddr, uint8_t regAddr, uint8_t value) {
+    *I2C0_INT_CLR_REG = 0xFFFFFFFF; // reset hardware flags
+
+    //Push addres and playload byte straight into the hardware FIFO buffer channel
+    *I2C0_DATA_FIFO_REG = (deviceAddr << 1);
+    *I2C0_DATA_FIFO_REG = regAddr;
+    *I2C0_DATA_FIFO_REG = value;
+
+    //load execution commands inside the controller stack array
+    *(I2C0_CMD_BASE_REG +0) = (0 << 14) | (1 << 11) | 0; // Start condition
+    *(I2C0_CMD_BASE_REG +1) = (1 << 14) | (1 << 11) | 3; //Write 3 bytes from FIFO and track ACK
+    *(I2C0_CMD_BASE_REG +2) = (3 << 14) | (1 << 11) | 0; //Stop condition
+
+    *I2C0_CTR_REG |= (1 << 5); // Trigger execution bit
+    vTaskDelay(pdMS_TO_TICKS(1));
+
+    //Return if the transmission finished cleanly witout NACK errors
+    return !(*I2C0_INT_CLR_REG & (1 << 10));
+}
+
+bool readI2CBareMetal(uint8_t deviceAddr, uint8_t regAddr, uint8_t* buffer, uint8_t lenght) {
+    if (lenght == 0) return false; 
+    *I2C0_INT_CLR_REG = 0xFFFFFFFF;
+
+    //Phase A write target internal register address to prepare the sensor pointer
+    *I2C0_DATA_FIFO_REG = (deviceAddr << 1);
+    *I2C0_DATA_FIFO_REG = regAddr;
+
+    *(I2C0_CMD_BASE_REG + 0)= (0 << 14) | (1 << 11) | 0; // Start condition
+    *(I2C0_CMD_BASE_REG + 1)= (1 << 14) | (1 << 11) | 2; // Write 2 bytes from FIFO and track ACK
+
+    //Phase B restart the bus in read mode and extract the burst payload from the sensor FIFO
+    *I2C0_DATA_FIFO_REG = (deviceAddr << 1) | 1; // device address + read bit 
+
+    *(I2C0_CMD_BASE_REG + 2) = (0 << 14) | (1 << 11) | 0; // Restart condition
+    *(I2C0_CMD_BASE_REG + 3) = (1 << 14) | (1 << 11) | 1; //Write 1 byte
+
+    //Read consecutive  payload data streaming into FIFO buffer, enforcing ACK for all but the last byte
+    *(I2C0_CMD_BASE_REG + 4) = (2 << 14) | (1 << 11) | lenght;
+    *(I2C0_CMD_BASE_REG + 5) = (3 << 14) | (1 << 11) | 0; //Stop condition
+
+    *I2C0_CTR_REG |= (1 << 5); // fire execution sequence
+    vTaskDelay(pdMS_TO_TICKS(1));
+
+    //If an unexpected NACK drops the line link abort inmediately
+    if (*I2C0_INT_CLR_REG & (1 << 10)) return false;
+
+    //Phase C: Extract the raw streaming data sirectly out of the hardware FIFO buffer into the user-provided array
+    for (uint8_t i = 0; i < lenght; i++) {
+        buffer[i] = (uint8_t)(*I2C0_DATA_FIFO_REG & 0xFF); // Mask to extract only the least significant byte
+
+    }
+    return true;
+}
+
+int32_t readBmp280TemperatureBareMetal() {
+    uint8_t rawBuffer[3] = {0, 0, 0};
+
+    //Extract 3 bytes simultaneously starting from register 0xFA
+    if (!readI2CBareMetal(0x76, 0xFA, rawBuffer, 3)) {
+        return -999; // Return error metric if transaction sequence drops
+    }
+
+    //reconstruct the individual chunks into a single clean 20 bit interger
+    int32_t adcRawTemperature = ((int32_t)rawBuffer[0] << 12) | ((int32_t)rawBuffer[1] << 4) | ((int32_t)rawBuffer[2] >> 4); 
+
+    //Bare metal uncompensated interger calculation scaling output directly to 0.01 degrees Celsius units (e.g., 2500 = 25.00°C)
+    int32_t humanReadableTemperature = ( adcRawTemperature * 100) / 4096;
+
+    return humanReadableTemperature;
+    
 }
