@@ -184,6 +184,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── CloudClient.h      # Outbound HTTPS network event signatures
 │   ├── DisplayMultiplex.h # Bare-metal 5461AS display driver signatures
 │   ├── FlashManager.h     # Non-Volatile Storage (NVS) logger signatures
+│   ├── I2CDriver.h        # Bare-metal I2C0 memory maps and bus signatures 
 │   ├── MqttClient.h       # Dynamic MQTT event routing signatures
 │   ├── OtaManager.h       # Secure Over-The-Air (OTA) wireless signatures
 │   ├── QueueManager.h     # Thread-safe FreeRTOS Queue infrastructure
@@ -196,6 +197,7 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 │   ├── CloudClient.cpp    # mbedTLS network engine implementation
 │   ├── DisplayMultiplex.cpp # Low-level 7-segment layout logic and LUT execution
 │   ├── FlashManager.cpp   # NVS partition read/write key-value execution
+│   ├── I2CDriver.cpp      # Native I2C0 hardware scheduler & command execution 
 │   ├── MqttClient.cpp     # Dynamic client & MQTT broker implementation
 │   ├── OtaManager.cpp     # Network bootloader listener callback execution
 │   ├── QueueManager.cpp   # FreeRTOS hardware-protected queue execution

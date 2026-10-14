@@ -330,6 +330,35 @@ void loop() {
 
   updateClimateTelemetry();
 
+  static unsigned long previousI2CMillis = 0;
+  const unsigned long I2C_INTERVAL = 5000; 
+
+  if (currentMillis -previousI2CMillis >= I2C_INTERVAL) {
+    previousI2CMillis = currentMillis;
+
+    //Clear the I2C interrupt status register to avoid false positives
+    *I2C0_INT_CLR_REG = 0xFFFFFFFF;
+
+    //Trigger a bare-metal read of the BMP280 industrial sensor temperature register
+    int32_t currentI2CTemperature = readBmp280TemperatureBareMetal();
+
+    if (currentI2CTemperature != -999) {
+        Serial.printf("[HARDWARE-DATA] BMP280 Bare-Metal Extract -> %d.%02d C\n", currentI2CTemperature / 100, abs(currentI2CTemperature % 100));
+        webTemperatureCache = currentI2CTemperature / 100;
+    }
+  }
+
+  //Extract raw industrial telemetry via internal bit shifting maps
+  int32_t currentI2CTemperature = readBmp280TemperatureBareMetal();
+
+  if (currentI2CTemperature != -999) {
+
+    Serial.printf("[HARDWARE-DATA] BMP280 Bare-Metal Extract -> %d.%02d C\n", currentI2CTemperature / 100, abs(currentI2CTemperature % 100));
+
+    //Scale centidegress down to standard base metrics for display and cloud telemetry
+    webTemperatureCache = currentI2CTemperature / 100;
+  }
+
   //Multiplexed input slection matrix controlling the servo kinematic execution
   if (webBypassMode) {
     //local BypassMode: Sacle the clean 12 bit voltage input straight to angular metrics
