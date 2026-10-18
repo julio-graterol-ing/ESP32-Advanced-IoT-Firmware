@@ -14,7 +14,14 @@
 #define I2C0_CTR_REG             ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x001C))
 #define I2C0_INT_CLR_REG         ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x0024))
 #define I2C0_CMD_BASE_REG        ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x005C))
-#define I2C0_DATA_FIFO_REG       ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x001C))
+#define I2C0_DATA_FIFO_REG ((volatile uint32_t*)(DR_REG_I2C_BASE + 0x001C))
+
+// GPIO Matrix Register mappings to physically wire the internal hardware peripheral to pins 26 and 27
+#define GPIO_BASE_REG            0x3ff44000
+#define GPIO_FUNC26_OUT_SEL_REG  ((volatile uint32_t*)(GPIO_BASE_REG + 0x057c)) // SCL Out
+#define GPIO_FUNC27_OUT_SEL_REG  ((volatile uint32_t*)(GPIO_BASE_REG + 0x0580)) // SDA Out
+#define GPIO_FUNC_IN_SEL_REG     ((volatile uint32_t*)(GPIO_BASE_REG + 0x0130)) // Input router base
+
 
 /**
  * @brief Configures native hardware registers to initialize the I2C bus at 100kHz.

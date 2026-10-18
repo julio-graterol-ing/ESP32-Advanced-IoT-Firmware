@@ -330,34 +330,28 @@ void loop() {
 
   updateClimateTelemetry();
 
-  static unsigned long previousI2CMillis = 0;
-  const unsigned long I2C_INTERVAL = 5000; 
+    // Enforce strict asynchronous intervals to throttle the serial monitor log stream
+  static unsigned long lastSerialPrintMillis = 0;
+  const unsigned long SERIAL_PRINT_INTERVAL = 2000; // Print exactly every 2000ms (2 seconds)
 
-  if (currentMillis -previousI2CMillis >= I2C_INTERVAL) {
-    previousI2CMillis = currentMillis;
-
-    //Clear the I2C interrupt status register to avoid false positives
-    *I2C0_INT_CLR_REG = 0xFFFFFFFF;
-
-    //Trigger a bare-metal read of the BMP280 industrial sensor temperature register
-    int32_t currentI2CTemperature = readBmp280TemperatureBareMetal();
-
-    if (currentI2CTemperature != -999) {
-        Serial.printf("[HARDWARE-DATA] BMP280 Bare-Metal Extract -> %d.%02d C\n", currentI2CTemperature / 100, abs(currentI2CTemperature % 100));
-        webTemperatureCache = currentI2CTemperature / 100;
-    }
-  }
-
-  //Extract raw industrial telemetry via internal bit shifting maps
+  // UNIFIED DECLARATION: Read metrics through the new operational memory maps (Exercise 9)
   int32_t currentI2CTemperature = readBmp280TemperatureBareMetal();
 
   if (currentI2CTemperature != -999) {
-
-    Serial.printf("[HARDWARE-DATA] BMP280 Bare-Metal Extract -> %d.%02d C\n", currentI2CTemperature / 100, abs(currentI2CTemperature % 100));
-
-    //Scale centidegress down to standard base metrics for display and cloud telemetry
+    // Update local caches silently on every single loop cycle to feed local servers
     webTemperatureCache = currentI2CTemperature / 100;
+
+    // Strict non-blocking timer boundary check to suppress command line spam
+    if (currentMillis - lastSerialPrintMillis >= SERIAL_PRINT_INTERVAL) {
+      lastSerialPrintMillis = currentMillis;
+
+      // Extract high-fidelity metrics with precise decimal tracking onto console
+      Serial.printf("[HARDWARE-DATA] BMP388 Bare-Metal Extract -> %d.%02d C\n", 
+                    currentI2CTemperature / 100, 
+                    abs(currentI2CTemperature % 100));
+    }
   }
+
 
   //Multiplexed input slection matrix controlling the servo kinematic execution
   if (webBypassMode) {
