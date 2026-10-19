@@ -21,6 +21,15 @@ This repository contains my evolution into 32-bit dual-core architectures, focus
 
 ### 📦 Phase 2: Cloud Ingestion Platforms & Real-Time Multitasking Architecture (Latest Updates)
 
+* **October 19, 2026 | Silicon ID Forensic Analysis & BMP388 24-Bit Polynomial Interpolation:**
+
+  **Project: Advanced Register-Level Architecture Mapping & Stream Throttling.**  
+  Successfully refactored the zero-abstraction driver layer after diagnosing a hardware variant mismatch, shifting the memory architecture from the legacy BMP280 registers to the high-performance industrial BMP388 (`0x6B`) protocol.
+
+  * *The Bottleneck:* Relying on standard generic address pointers maps empty registry fields on modern clonic chips, forcing data returns to absolute zero (`0.00 C`). Concurrently, reading raw FIFO slots (`0x3ff5301c`) at central processing speed triggers continuous hardware interrupt flags, driving the multi-core scheduler into a cascading logic loop that spams logs and blocks asynchronous network events.
+  * *The Engineering Fix:* Instantiated direct hardware link patches by writing directly to the ESP32 internal GPIO Matrix registers (`*GPIO_FUNC26_OUT_SEL_REG = 30`), routing the hardware I2C0 peripheral clock directly into the active copper lines. Mapped the native BMP388 telemetry frame tracking starting at register `0x07` to extract continuous 24-bit temperature sequences. Implemented an asynchronous 2-second non-blocking timer layer using `millis()` boundaries to throttle execution. The de-serialized Little-Endian variables are calculated utilizing the official Bosch floating-point polynomial constants (`b3_T1` to `b3_T3`), bringing the data output to a stabilized room readout of 25.00ºC without dropping high-priority display loops.
+
+
 * **October 13, 2026 | Native Low-Level I2C Interface Configuration & IO MUX Mapping:**
 
   **Project: Bare-Metal Peripheral Drivers without Layer Abstraction.**  
